@@ -1,7 +1,14 @@
 <?php
 require './config.php';
-$listingSql = "SELECT * FROM listings";
+$listingSql = null;
+if (isset($_GET['user'])) {
+    $listingSql = "SELECT * FROM listings WHERE userId = {$_GET['user']}";
+} else {
+    $listingSql = "SELECT * FROM listings";
+}
 $result = $conn->query($listingSql);
+$userSql = "SELECT * FROM users";
+$userResult = $conn->query($userSql);
 ?>
 
 <!DOCTYPE html>
@@ -22,12 +29,32 @@ $result = $conn->query($listingSql);
     require './partials/header.php'
     ?>
 
-    <section class="text-gray-600 body-font" style="height: calc(100vh - 184px);">
+    <section class="text-gray-600 body-font" style="min-height: calc(100vh - 184px);">
         <div class="container px-5 py-12 mx-auto">
             <div class="flex flex-wrap w-full mb-16">
                 <div class="lg:w-1/2 w-full mb-6 lg:mb-0">
                     <h1 class="sm:text-3xl text-2xl font-medium title-font mb-2 text-gray-900">All Listings</h1>
                     <div class="h-1 w-20 bg-blue-500 rounded"></div>
+                </div>
+                <div class="lg:w-1/2 w-full mb-6 lg:mb-0 flex justify-end">
+                    <div class="lg:w-1/2">
+                        <label for="users" class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-400">Filter By User</label>
+                        <select id="users" class=" text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ">
+                            <option value="">All Users</option>
+                            <?php
+                            foreach ($userResult->fetch_all() as $user) {
+                                $isSelected = false;
+                                if (isset($_GET['user'])) {
+                                    $isSelected = $user[0] == $_GET['user'] ? 'selected' : '';
+                                }
+                                if (isset($_GET['user'])) {
+                                    echo "value={$_GET['user']}";
+                                }
+                                echo "<option $isSelected value=" . $user[0] . ">" . $user[1] . "</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="flex flex-wrap -m-4">
@@ -37,7 +64,8 @@ $result = $conn->query($listingSql);
                     $title = $listing[2];
                     $description = $listing[3];
                     $price = $listing[5];
-                    echo "<div class='xl:w-1/4 md:w-1/2 p-4 cursor-pointer'>
+                    $id = $listing[0];
+                    echo "<div class='listing xl:w-1/4 md:w-1/2 p-4 cursor-pointer' data-id='$id'>
                     <div class='border border-gray-300 p-6 rounded-lg' data-modal-toggle='authentication-modal'>
                         <img class=h-40 rounded w-full object-cover object-center mb-6' src='$image' alt='content'>
                         <br/>
@@ -61,8 +89,12 @@ $result = $conn->query($listingSql);
                             </svg>
                         </button>
                     </div>
-                    <form class="px-6 pb-4 space-y-6 lg:px-8 sm:pb-6 xl:pb-8" action="#">
+                    <form class="px-6 pb-4 space-y-6 lg:px-8 sm:pb-6 xl:pb-8" action="./bookListing.php" method="POST">
                         <h3 class="text-xl font-medium text-gray-900 ">Book This Listing</h3>
+                        <div>
+                            <label for="listingId" class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Listing ID</label>
+                            <input name="listingId" id="listingId" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                        </div>
                         <div>
                             <label for="email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Your email</label>
                             <input name="email" id="email" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="name@company.com" required>
@@ -85,7 +117,22 @@ $result = $conn->query($listingSql);
     <?php
     require './partials/footer.php'
     ?>
-
+    <script>
+        const users = document.getElementById('users');
+        users.onchange = (e) => {
+            if (e.target.value !== '') {
+                window.location.assign(`${window.location.pathname}?user=${e.target.value}`);
+            } else {
+                window.location.assign(`${window.location.pathname}`);
+            }
+        }
+        const listings = document.querySelectorAll('.listing');
+        Array.from(listings).forEach(listing => {
+            listing.addEventListener('click', (e) => {
+                document.querySelector('#listingId').value = listing.dataset.id;
+            })
+        })
+    </script>
 </body>
 
 </html>
